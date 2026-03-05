@@ -35,6 +35,10 @@ const songSchema=new mongoose.Schema({
         type:String,
         trim:true
     }],
+    lyrics:{
+        type:String,
+        trim:true
+    },
     plays:{
         type:Number,
         default:0

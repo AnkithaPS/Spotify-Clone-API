@@ -8,7 +8,6 @@ const Song=require("../models/Song")
 //Create Album
 const createAlbum=asyncHandler(async(req,res)=>{
     try {
-        
         if(!req.body)
         {
             res.status(statusCodes.BAD_REQUEST)
@@ -109,7 +108,7 @@ const getAlbum=asyncHandler(async(req,res)=>{
             album,
             page:parseInt(page),
             pages:Math.ceil(count/parseInt(limit)),
-        totalArtists:count
+            totalAlbum:count
     })
     } catch (error) {
         res.status(statusCodes.INTERNAL_SERVER_ERROR).json({message:error.message})
@@ -128,7 +127,7 @@ const getAlbumById=asyncHandler(async(req,res)=>{
         if(!album)
         {
             res.status(statusCodes.NOT_FOUND)
-            throw new Error("Invalid id")
+            throw new Error("Album not found")
         }
         res.status(statusCodes.OK).json(album)
         
@@ -214,4 +213,11 @@ const getNewReleasedAlbum=asyncHandler(async(req,res)=>{
         res.status(statusCodes.INTERNAL_SERVER_ERROR).json({message:error.message})
     }
 })
-module.exports={createAlbum,getAlbum,getAlbumById,updateAlbum,deleteAlbum,getNewReleasedAlbum}
+module.exports={
+    createAlbum,
+    getAlbum,
+    getAlbumById,
+    updateAlbum,
+    deleteAlbum,
+    getNewReleasedAlbum
+}

@@ -22,6 +22,10 @@ const createArtist=asyncHandler(async(req,res)=>{
             throw new Error("name , bio, genres is required")
             
         }
+        let genre;
+        if (typeof genres === "string") {
+            genre = JSON.parse(genres);
+        }   
         const existingArtist=await Artist.findOne({name})
         if(existingArtist)
         {
@@ -34,8 +38,9 @@ const createArtist=asyncHandler(async(req,res)=>{
             const result=await uploadToCloudinary(req.file.path,"spotify/artist")
             imgUrl=result.secure_url
         }
+        
         const artist=await Artist.create({
-            name,bio,genres,isVerified:true,image:imgUrl
+            name,bio,genres:genre,isVerified:true,image:imgUrl
         })
         res.status(statusCodes.CREATED).json(artist)
     } catch (error) {
@@ -70,7 +75,7 @@ const getArtists=asyncHandler(async(req,res)=>{
             artist,
             page:parseInt(page),
             pages:Math.ceil(count/parseInt(limit)),
-        totalArtists:count
+            totalArtists:count
     })
     } catch (error) {
         res.status(statusCodes.INTERNAL_SERVER_ERROR).json({message:error.message})
@@ -89,7 +94,7 @@ const getArtistById=asyncHandler(async(req,res)=>{
         if(!artist)
         {
             res.status(statusCodes.NOT_FOUND)
-            throw new Error("Invalid id")
+            throw new Error("Artist not found")
         }
         res.status(statusCodes.OK).json(artist)
         
@@ -120,7 +125,9 @@ const updateArtist=asyncHandler(async(req,res)=>{
             }
             if(genres)
             {
-                artist.genres=genres||artist.genres
+                if (typeof genres === "string") {
+                    artist.genres=JSON.parse(genres)||artist.genres
+                }   
             }
             if(isVerified)
             {
@@ -177,7 +184,6 @@ const getArtistTopSong=asyncHandler(async(req,res)=>{
     try {
         const {limit}=req.query
         const song=await Song.find({artist:req.params.id}).sort({plays:-1}).limit(parseInt(limit)).populate("album","title coverImage")
-        console.log(req.params.id)
         if(song.length>0)
         {
             res.status(statusCodes.OK).json(song)
@@ -191,4 +197,12 @@ const getArtistTopSong=asyncHandler(async(req,res)=>{
         res.status(statusCodes.INTERNAL_SERVER_ERROR).json({message:error.message})
     }
 })
-module.exports={createArtist,getArtists,getArtistById,updateArtist,deleteArtist,getTopArtist,getArtistTopSong}
+module.exports={
+    createArtist,
+    getArtists,
+    getArtistById,
+    updateArtist,
+    deleteArtist,
+    getTopArtist,
+    getArtistTopSong
+}
