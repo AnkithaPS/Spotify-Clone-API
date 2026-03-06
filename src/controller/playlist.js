@@ -4,6 +4,7 @@ const uploadToCloudinary=require("../utils/cloudinaryUpload")
 const Artist=require("../models/Artist")
 const Song=require("../models/Song")
 const Playlist = require("../models/Playlist")
+const User = require("../models/User")
 
 //Create new playlist
 const createPlaylist=asyncHandler(async(req,res)=>{
@@ -238,6 +239,147 @@ const addSongsToPlaylist=asyncHandler(async(req,res)=>{
         res.status(statusCodes.INTERNAL_SERVER_ERROR).json({message:error.message})
     }
 })
+
+//Remove song from Playlist
+const removeSongsFromPlaylist=asyncHandler(async(req,res)=>{
+    try {
+        //find the playlist
+        const playlist=await Playlist.findById(req.params.id)
+        if(!playlist)
+        {
+            res.status(statusCodes.NOT_FOUND)
+            throw new Error("Playlist Not Found")
+        }
+        if(playlist.creator.equals(req.user._id)&&playlist.collaborators.some((collab)=>collab.equals(req.user._id)))
+        {
+            res.status(statusCodes.FORBIDDEN)
+            throw new Error("Not authorized to modify this playlist")
+        }
+        const songsId=req.params.songId;
+        //check if song is in playlist
+        if(!playlist.songs.includes(songsId))
+        {
+            res.status(statusCodes.BAD_REQUEST)
+            throw new Error("Song is not the playlist")
+        }
+        //remove song from playlist
+        playlist.songs=playlist.songs.filter((id)=>id.toString()!==songsId)
+        playlist.save()
+        res.status(statusCodes.OK).json({message:"Song removed from playlist"})
+    
+    } catch (error) {
+        res.status(statusCodes.INTERNAL_SERVER_ERROR).json({message:error.message})
+    }
+})
+
+//Add Collaborator
+const addCollaborator=asyncHandler(async(req,res)=>{
+    try {
+        const userId=req.body.userId
+        if(!userId)
+        {
+            res.status(statusCodes.BAD_REQUEST)
+            throw new Error("User Id is required")
+        }
+        //check if user exists
+        const user=await User.findById(userId)
+        if(!user)
+        {
+            res.status(statusCodes.NOT_FOUND)
+            throw new Error("User Not Found!")
+        }
+        //check if playlist exists
+        const playlist=await Playlist.findById(req.params.id)
+
+        if(!playlist)
+        {
+            res.status(statusCodes.NOT_FOUND)
+            throw new Error("Playlist not found!")
+        }
+        //only creator can add collaborator
+        if(!playlist.creator.equals(req.user._id))
+        {
+            res.status(statusCodes.FORBIDDEN)
+            throw new Error("Not authorized to add collaborator")
+        }
+        //check if user is already in collaborator
+        if(playlist.collaborators.includes(userId))
+        {
+
+            res.status(statusCodes.BAD_REQUEST)
+            throw new Error("User is already a collaborator")
+        }
+
+        //add user to collaborator
+        playlist.collaborators.push(userId)
+        playlist.save()
+
+        res.status(statusCodes.OK).json({message:"Collaborator is added"})
+    } catch (error) {
+        res.status(statusCodes.INTERNAL_SERVER_ERROR).json({message:error.message})
+    }
+})
+
+//Remove collaborator
+const removeCollaborator=asyncHandler(async(req,res)=>{
+    try {
+        const userId=req.body.userId
+        if(!userId)
+        {
+            res.status(statusCodes.BAD_REQUEST)
+            throw new Error("User Id is required")
+        }
+        //check if user exists
+        const user=await User.findById(userId)
+        if(!user)
+        {
+            res.status(statusCodes.NOT_FOUND)
+            throw new Error("User Not Found!")
+        }
+        //check if playlist exists
+        const playlist=await Playlist.findById(req.params.id)
+
+        if(!playlist)
+        {
+            res.status(statusCodes.NOT_FOUND)
+            throw new Error("Playlist not found!")
+        }
+        //only creator can add collaborator
+        if(!playlist.creator.equals(req.user._id))
+        {
+            res.status(statusCodes.FORBIDDEN)
+            throw new Error("Only creator can remove collaborator")
+        }
+        //check if user is already in collaborator
+        if(!playlist.collaborators.includes(userId))
+        {
+            res.status(statusCodes.BAD_REQUEST)
+            throw new Error("User is not a collaborator")
+        }
+
+        //remove user from collaborator
+        playlist.collaborators=playlist.collaborators.filter((id)=>id.toString()!==userId)
+        playlist.save();
+
+        res.status(statusCodes.OK).json({message:"Collaborator is removed"})
+    } catch (error) {
+        res.status(statusCodes.INTERNAL_SERVER_ERROR).json({message:error.message})
+    }
+})
+
+//Fetch featured playlist
+const getFeaturedPlaylist=asyncHandler(async(req,res)=>{
+    try {
+        const{limit=10}=req.query
+        const filter={isPublic:true}
+        const playlist=await Playlist.find(filter).sort({followers:-1})
+        .limit(limit)
+        .populate("creator","name profilePicture")
+        res.status(statusCodes.OK).json(playlist)
+    } catch (error) {
+        res.status(statusCodes.INTERNAL_SERVER_ERROR).json({message:error.message})
+    }
+})
 module.exports={
     createPlaylist,
     getPlaylist,
@@ -245,5 +387,9 @@ module.exports={
     getPlaylistById,
     updatePlaylist,
     deletePlaylist,
-    addSongsToPlaylist
+    addSongsToPlaylist,
+    removeSongsFromPlaylist,
+    addCollaborator,
+    removeCollaborator,
+    getFeaturedPlaylist
 }

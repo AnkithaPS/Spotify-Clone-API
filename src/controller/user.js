@@ -2,6 +2,8 @@ const asyncHandler = require('express-async-handler');
 const statusCodes = require('http-status-codes');
 const User = require('../models/User');
 const Playlist = require('../models/Playlist');
+const Artist=require("../models/Artist")
+const Song=require("../models/Song")
 const generateToken=require("../utils/generateToken");
 const uploadToCloudinary = require('../utils/cloudinaryUpload');
 
@@ -70,11 +72,11 @@ const loginUser=asyncHandler(async(req,res)=>{
     }
 })
 
-
 //Get user profile
 const getUserProfile=asyncHandler(async(req,res)=>{
     try{
-    const user=await User.findById(req.user._id).select("-password").populate("likedSongs","title artist duration")
+    const user=await User.findById(req.user._id).select("-password")
+    .populate("likedSongs","title artist duration")
     .populate("likedAlbums","title artist releaseDate")
     .populate("followedArtists","name image")
     .populate("followedPlaylists","name creator coverImage")
@@ -90,7 +92,6 @@ const getUserProfile=asyncHandler(async(req,res)=>{
         res.status(statusCodes.INTERNAL_SERVER_ERROR).json({message:error.message})
     }
 })
-
 
 //Update user Profile
 const updateUserProfile=asyncHandler(async(req,res)=>{
@@ -133,4 +134,144 @@ const updateUserProfile=asyncHandler(async(req,res)=>{
         res.status(statusCodes.INTERNAL_SERVER_ERROR).json({message:error.message})
     }
 })
-module.exports={registerUser,loginUser,getUserProfile,updateUserProfile}
+
+//Toggle like/unlike Songs
+const toggleLikeSong=asyncHandler(async(req,res)=>{
+    try{
+        const songId=req.params.songId
+        const user=await User.findById(req.user._id)
+        if(!user)
+        {
+            res.status(statusCodes.NOT_FOUND)
+            throw new Error("User Not Found")
+        }
+        const song=await Song.findById(songId)
+        if(!song)
+        {
+            res.status(statusCodes.NOT_FOUND)
+            throw new Error("Song ID Not Found")   
+        }
+        //check if song is already liked
+        const songIndex=user.likedSongs.indexOf(songId)
+        //add liked song if not index found
+        if(songIndex==-1)
+        {
+            user.likedSongs.push(songId)
+            //increment the liked count of Song
+            song.likes+=1
+            song.save();
+        }
+        //remove if already liked
+        else{
+            user.likedSongs.splice(songIndex,1)
+            //on unlike remove like count
+            if(song.likes>0)
+            {
+                song.likes-=1
+                song.save();
+            }
+            
+        }
+        await Promise.all([ user.save(),song.save()])
+        res.status(statusCodes.OK).json({likedSongs:user.likedSongs,message:songIndex==-1?"Song added to liked songs":"Song removed from liked songs"})
+    }catch(error)
+    {
+        res.status(statusCodes.INTERNAL_SERVER_ERROR).json({message:error.message})
+    }
+})
+
+//Toggle Follow/Unfollow Artist 
+const toggleFollowArtist=asyncHandler(async(req,res)=>{
+    try{
+        const artistId=req.params.artistId
+        const user=await User.findById(req.user._id)
+        if(!user)
+        {
+            res.status(statusCodes.NOT_FOUND)
+            throw new Error("User Not Found")
+        }
+        const artist=await Artist.findById(artistId)
+        if(!artist)
+        {
+            res.status(statusCodes.NOT_FOUND)
+            throw new Error("Artist ID Not Found")   
+        }
+        //check if artist is already followed
+        const artistIndex=user.followedArtists.indexOf(artistId)
+        //add artist to followed if not found
+        if(artistIndex==-1)
+        {
+            user.followedArtists.push(artistId)
+            //increase the follow count of artist
+            artist.followers+=1
+            artist.save()
+        }
+        //unfollow artist if already followed
+        else{
+            user.followedArtists.splice(artistIndex,1)
+            //decrease the follow count of artist
+            if(artist.followers>0)
+            {
+                artist.followers-=1
+                artist.save()
+            }
+            
+        }
+        await Promise.all([user.save(),artist.save()])
+        res.status(statusCodes.OK).json({followedArtists:user.followedArtists,message:artistIndex==-1?"Artist followed":"Artist unfollowed"})
+    }catch(error)
+    {
+        res.status(statusCodes.INTERNAL_SERVER_ERROR).json({message:error.message})
+    }
+})
+
+//Toggle Follow/Unfollow Playlist 
+const toggleFollowPlaylist=asyncHandler(async(req,res)=>{
+    try{
+        const playlistId=req.params.playlistId
+        const user=await User.findById(req.user._id)
+        if(!user)
+        {
+            res.status(statusCodes.NOT_FOUND)
+            throw new Error("User Not Found")
+        }
+        const playlist=await Playlist.findById(playlistId)
+        if(!playlist)
+        {
+            res.status(statusCodes.NOT_FOUND)
+            throw new Error("Playlist ID Not Found")   
+        }
+        //check if playlist is already followed
+        const playlistIndex=user.followedPlaylists.indexOf(playlistId)
+        //add playlist to followed if not found
+        if(playlistIndex==-1)
+        {
+            user.followedPlaylists.push(playlistId)
+            //increase the follow count of playlist
+                playlist.followers+=1            
+        }
+        //unfollow playlist if already followed
+        else{
+            user.followedPlaylists.splice(playlistIndex,1)
+            //decrease the follow count of playlist
+            if(playlist.followers>0)
+            {
+                playlist.followers-=1
+            }  
+        }
+        await Promise.all([user.save(),playlist.save()])
+        res.status(statusCodes.OK).json({followedPlaylists:user.followedPlaylists,message:playlistIndex==-1?"Playlist Followed":"Playlist unfollowed"})
+    }catch(error)
+    {
+        res.status(statusCodes.INTERNAL_SERVER_ERROR).json({message:error.message})
+    }
+})
+module.exports={
+    registerUser,
+    loginUser,
+    getUserProfile,
+    updateUserProfile,
+    toggleLikeSong,
+    toggleFollowArtist,
+    toggleFollowPlaylist
+}
