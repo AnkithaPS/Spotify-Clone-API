@@ -6,6 +6,8 @@ const albumRoutes=require("./routes/album")
 const songRoutes=require("./routes/song")
 const playlistRoutes=require("./routes/playlist")
 const statusCodes=require('http-status-codes');
+const cors = require('cors');
+
 require('dotenv').config();
 
 //Initialize express app
@@ -21,6 +23,11 @@ mongoose.connect(process.env.MONGO_URI).then(()=>{
 //Pass incoming data
 app.use(express.json());
 
+app.use(express.json());
+app.use(cors({
+  origin: `${process.env.UI_URL}`,
+  credentials: true
+}));
 
 //Routes
 app.use("/api/v1/users",userRoutes);

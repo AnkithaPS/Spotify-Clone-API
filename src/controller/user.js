@@ -159,7 +159,6 @@ const toggleLikeSong=asyncHandler(async(req,res)=>{
             user.likedSongs.push(songId)
             //increment the liked count of Song
             song.likes+=1
-            song.save();
         }
         //remove if already liked
         else{
@@ -168,7 +167,6 @@ const toggleLikeSong=asyncHandler(async(req,res)=>{
             if(song.likes>0)
             {
                 song.likes-=1
-                song.save();
             }
             
         }
@@ -204,7 +202,6 @@ const toggleFollowArtist=asyncHandler(async(req,res)=>{
             user.followedArtists.push(artistId)
             //increase the follow count of artist
             artist.followers+=1
-            artist.save()
         }
         //unfollow artist if already followed
         else{
@@ -213,7 +210,6 @@ const toggleFollowArtist=asyncHandler(async(req,res)=>{
             if(artist.followers>0)
             {
                 artist.followers-=1
-                artist.save()
             }
             
         }
